@@ -6,6 +6,10 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from gateway.db.base import Base
 from gateway.db.models.mixins import TimestampMixin, UUIDPrimaryKeyMixin
 
+from gateway.db.models.agent import Agent
+from gateway.db.models.team import Team
+from gateway.db.models.api_key import APIKey
+from gateway.db.models.provider import Provider
 
 class Project(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     __tablename__ = "projects"

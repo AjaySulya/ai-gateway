@@ -1,11 +1,15 @@
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from gateway.db.base import Base
 from gateway.db.models.mixins import TimestampMixin, UUIDPrimaryKeyMixin
+
+if TYPE_CHECKING:
+    from gateway.db.models.project import Project
 
 
 class APIKey(UUIDPrimaryKeyMixin, TimestampMixin, Base):

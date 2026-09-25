@@ -1,6 +1,6 @@
-import enum
 import uuid
 from datetime import datetime
+from enum import StrEnum
 
 from sqlalchemy import DateTime, Enum, ForeignKey, Integer, Numeric, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID
@@ -10,7 +10,7 @@ from gateway.db.base import Base
 from gateway.db.models.mixins import UUIDPrimaryKeyMixin
 
 
-class UsageStatus(str, enum.Enum):
+class UsageStatus(StrEnum):
     success = "success"
     error = "error"
 

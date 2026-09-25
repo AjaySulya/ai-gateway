@@ -8,14 +8,18 @@ def test_root_is_unrestricted():
 
 
 def test_child_cannot_loosen_parent_allowlist():
-    org = merge_policy(EffectivePolicy(), PolicyConfig(allowed_models=["gpt-4o", "claude-sonnet-4-6"]))
+    org = merge_policy(
+        EffectivePolicy(), PolicyConfig(allowed_models=["gpt-4o", "claude-sonnet-4-6"])
+    )
     # Team tries to allow a model the org never permitted - must not appear.
     team = merge_policy(org, PolicyConfig(allowed_models=["gpt-4o", "gpt-3.5-turbo"]))
     assert team.allowed_models == ["gpt-4o"]
 
 
 def test_child_can_narrow_allowlist():
-    org = merge_policy(EffectivePolicy(), PolicyConfig(allowed_models=["gpt-4o", "claude-sonnet-4-6"]))
+    org = merge_policy(
+        EffectivePolicy(), PolicyConfig(allowed_models=["gpt-4o", "claude-sonnet-4-6"])
+    )
     project = merge_policy(org, PolicyConfig(allowed_models=["claude-sonnet-4-6"]))
     assert project.allowed_models == ["claude-sonnet-4-6"]
 
@@ -77,10 +81,13 @@ def test_full_hierarchy_walk_only_narrows():
     """Simulates org -> team -> project -> agent without a DB: each level
     can restrict further, and nothing set by a parent ever reappears."""
     effective = EffectivePolicy()
-    effective = merge_policy(effective, PolicyConfig(denied_models=["gpt-3.5-turbo"], budget_limit_usd=10_000))
+    effective = merge_policy(
+        effective, PolicyConfig(denied_models=["gpt-3.5-turbo"], budget_limit_usd=10_000)
+    )
     effective = merge_policy(effective, PolicyConfig(budget_limit_usd=2_000))
     effective = merge_policy(
-        effective, PolicyConfig(allowed_models=["gpt-4o", "claude-sonnet-4-6"], budget_limit_usd=5_000)
+        effective,
+        PolicyConfig(allowed_models=["gpt-4o", "claude-sonnet-4-6"], budget_limit_usd=5_000),
     )
     effective = merge_policy(effective, PolicyConfig(allowed_models=["claude-sonnet-4-6"]))
 

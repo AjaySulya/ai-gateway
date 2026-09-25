@@ -1,4 +1,5 @@
 import uuid
+from typing import TYPE_CHECKING
 
 from sqlalchemy import ForeignKey, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -6,7 +7,8 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from gateway.db.base import Base
 from gateway.db.models.mixins import TimestampMixin, UUIDPrimaryKeyMixin
 
-from gateway.db.models.project import Project
+if TYPE_CHECKING:
+    from gateway.db.models.project import Project
 
 
 class Agent(UUIDPrimaryKeyMixin, TimestampMixin, Base):

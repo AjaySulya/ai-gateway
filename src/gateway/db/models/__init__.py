@@ -16,8 +16,8 @@ from gateway.db.models.usage_record import UsageRecord, UsageStatus
 from gateway.db.models.user import User
 
 __all__ = [
-    "Agent",
     "APIKey",
+    "Agent",
     "Model",
     "Organization",
     "OrganizationMembership",

@@ -153,9 +153,7 @@ async def check_scope_access(
     check) is a field on the request body rather than a fixed path param."""
     if scope_type == PolicyScope.organization:
         if await _org_role(db, user, scope_id) != OrganizationRole.admin:
-            raise HTTPException(
-                status.HTTP_403_FORBIDDEN, "Organization admin privileges required"
-            )
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "Organization admin privileges required")
     elif scope_type == PolicyScope.team:
         await require_team_access(scope_id, user, db)
     elif scope_type == PolicyScope.project:

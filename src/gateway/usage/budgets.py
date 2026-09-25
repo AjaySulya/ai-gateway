@@ -39,7 +39,12 @@ async def check_budget(
     when over_budget is False.
     """
     levels = [
-        (PolicyScope.organization, context.organization_id, UsageRecord.organization_id, "organization"),
+        (
+            PolicyScope.organization,
+            context.organization_id,
+            UsageRecord.organization_id,
+            "organization",
+        ),
         (PolicyScope.team, context.team_id, UsageRecord.team_id, "team"),
         (PolicyScope.project, context.project_id, UsageRecord.project_id, "project"),
     ]

@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import Depends, Header, HTTPException, status
 from sqlalchemy import select
@@ -39,7 +39,7 @@ async def resolve_api_key(
             )
         agent_id = agent.id
 
-    api_key.last_used_at = datetime.now(timezone.utc)
+    api_key.last_used_at = datetime.now(UTC)
     await db.commit()
 
     return RequestContext(

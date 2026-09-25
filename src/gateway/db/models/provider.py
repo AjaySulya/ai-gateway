@@ -1,5 +1,6 @@
-import enum
 import uuid
+from enum import StrEnum
+from typing import TYPE_CHECKING
 
 from sqlalchemy import Boolean, Enum, ForeignKey, String
 from sqlalchemy.dialects.postgresql import JSONB
@@ -8,11 +9,12 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from gateway.db.base import Base
 from gateway.db.models.mixins import TimestampMixin, UUIDPrimaryKeyMixin
 
-from gateway.db.models.project import Project
-from gateway.db.models.model import Model
+if TYPE_CHECKING:
+    from gateway.db.models.model import Model
+    from gateway.db.models.project import Project
 
 
-class ProviderType(str, enum.Enum):
+class ProviderType(StrEnum):
     openai = "openai"
     anthropic = "anthropic"
     azure_openai = "azure_openai"

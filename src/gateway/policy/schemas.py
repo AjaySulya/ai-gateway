@@ -33,8 +33,7 @@ class EffectivePolicy(BaseModel):
     allowed_regions: list[str] | None = None
 
     def allows_model(self, model_name: str) -> bool:
-        if model_name in self.denied_models:
-            return False
-        if self.allowed_models is not None and model_name not in self.allowed_models:
-            return False
-        return True
+        return not (
+            model_name in self.denied_models
+            or (self.allowed_models is not None and model_name not in self.allowed_models)
+        )

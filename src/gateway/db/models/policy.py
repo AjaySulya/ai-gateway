@@ -1,5 +1,5 @@
-import enum
 import uuid
+from enum import StrEnum
 
 from sqlalchemy import Boolean, Enum, String
 from sqlalchemy.dialects.postgresql import JSONB, UUID
@@ -9,7 +9,7 @@ from gateway.db.base import Base
 from gateway.db.models.mixins import TimestampMixin, UUIDPrimaryKeyMixin
 
 
-class PolicyScope(str, enum.Enum):
+class PolicyScope(StrEnum):
     organization = "organization"
     team = "team"
     project = "project"

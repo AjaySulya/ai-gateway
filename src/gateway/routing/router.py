@@ -14,7 +14,8 @@ oversight.
 import asyncio
 import random
 import uuid
-from typing import Any, AsyncIterator
+from collections.abc import AsyncIterator
+from typing import Any
 
 import litellm
 from fastapi import HTTPException, status
@@ -146,7 +147,7 @@ async def route_chat_completion(
             )
             await circuit_breaker.record_success(provider.id)
             return response, provider
-        except Exception as exc:  # noqa: BLE001 - deliberately broad: any
+        except Exception as exc:
             # failure on this candidate should fall through to the next one
             last_error = exc
             await circuit_breaker.record_failure(provider.id)

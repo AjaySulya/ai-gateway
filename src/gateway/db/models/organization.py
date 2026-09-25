@@ -1,10 +1,13 @@
+from typing import TYPE_CHECKING
+
 from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from gateway.db.base import Base
 from gateway.db.models.mixins import TimestampMixin, UUIDPrimaryKeyMixin
 
-from gateway.db.models.team import Team
+if TYPE_CHECKING:
+    from gateway.db.models.team import Team
 
 
 class Organization(UUIDPrimaryKeyMixin, TimestampMixin, Base):

@@ -13,4 +13,3 @@ TypeSafe Jev slots in later as a smarter candidate *orderer* in front of
 strategies.get_candidates() - see README.md - now that this deterministic
 path is in place.
 """
-

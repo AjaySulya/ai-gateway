@@ -4,7 +4,11 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from gateway.auth.dependencies import get_current_user, require_project_access, require_provider_access
+from gateway.auth.dependencies import (
+    get_current_user,
+    require_project_access,
+    require_provider_access,
+)
 from gateway.db.models import Model, Provider, User
 from gateway.db.session import get_db
 from gateway.routing import circuit_breaker

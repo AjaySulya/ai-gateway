@@ -12,6 +12,7 @@ from gateway.db.models.policy import Policy, PolicyScope
 from gateway.db.models.project import Project
 from gateway.db.models.provider import Provider, ProviderType
 from gateway.db.models.team import Team
+from gateway.db.models.usage_record import UsageRecord, UsageStatus
 from gateway.db.models.user import User
 
 __all__ = [
@@ -29,5 +30,7 @@ __all__ = [
     "Team",
     "TeamMembership",
     "TeamRole",
+    "UsageRecord",
+    "UsageStatus",
     "User",
 ]

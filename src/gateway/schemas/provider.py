@@ -22,3 +22,9 @@ class ProviderRead(BaseModel):
     credential_ref: str
     extra_config: dict
     is_active: bool
+
+
+class ProviderHealth(BaseModel):
+    circuit_open: bool
+    failures: int
+    opened_until: float | None = None

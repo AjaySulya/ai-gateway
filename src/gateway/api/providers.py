@@ -7,8 +7,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from gateway.auth.dependencies import get_current_user, require_project_access, require_provider_access
 from gateway.db.models import Model, Provider, User
 from gateway.db.session import get_db
+from gateway.routing import circuit_breaker
 from gateway.schemas.model_catalog import ModelCreate, ModelRead
-from gateway.schemas.provider import ProviderCreate, ProviderRead
+from gateway.schemas.provider import ProviderCreate, ProviderHealth, ProviderRead
 
 router = APIRouter(tags=["providers"])
 
@@ -67,3 +68,13 @@ async def list_models(
 ):
     result = await db.execute(select(Model).where(Model.provider_id == provider_id))
     return result.scalars().all()
+
+
+@router.get("/providers/{provider_id}/health", response_model=ProviderHealth)
+async def get_provider_health(
+    provider_id: uuid.UUID,
+    user: User = Depends(require_provider_access),
+):
+    """Circuit-breaker state for Phase 4's router - not a live probe, just
+    what the last few real requests through this provider have shown."""
+    return await circuit_breaker.get_state(provider_id)

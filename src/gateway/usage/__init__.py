@@ -1,11 +1,15 @@
 """Phase 5 - usage tracking and budget enforcement.
 
-Will hold: a usage-record table (tokens, cost, latency, model, provider,
-org/team/project, status) logged per request, and budget checks (soft/hard
-caps) against aggregated usage. This is what makes
-EffectivePolicy.budget_limit_usd (see gateway.policy.schemas) actually
-enforceable - it's resolved correctly today but nothing checks against it
-yet.
+- tracker.py    writes a UsageRecord for every /v1/chat/completions call
+                (success, provider failure, policy denial, or budget
+                denial), plus token/cost extraction for non-streaming
+                responses via litellm.completion_cost()
+- budgets.py    checks each hierarchy level's own budget_limit_usd against
+                that level's own cumulative spend - see budgets.py's
+                docstring for why this can't just reuse Phase 3's merged
+                EffectivePolicy.budget_limit_usd
 
-Not implemented yet.
+Cumulative, all-time budgets only - no daily/monthly reset window yet.
+rate_limit_rpm is still unenforced; that's Phase 6.
 """
+

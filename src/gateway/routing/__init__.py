@@ -1,10 +1,16 @@
 """Phase 4 - Model Router.
 
-Will hold: the static priority-fallback selection strategy, per-provider
-health checks (cached in Redis), retry/backoff, and a circuit breaker.
-TypeSafe Jev slots in afterward as a candidate-selection step in front of
-this module's deterministic validation/fallback logic - see README.md.
+- strategies.py       candidate resolution: every active (Model, Provider)
+                       match for a requested model name, ordered by priority
+- circuit_breaker.py   per-provider failure tracking in Redis; open/closed
+                       derived from failure count + cooldown timestamp
+- router.py            orchestrates the two above plus retry/backoff;
+                       gateway.api.chat calls this instead of the old
+                       single-candidate gateway.data_plane.model_resolution
+                       (removed - this package replaces it)
 
-Not implemented yet. gateway.data_plane.model_resolution.resolve_model()
-is today's single-candidate stand-in for what this package replaces.
+TypeSafe Jev slots in later as a smarter candidate *orderer* in front of
+strategies.get_candidates() - see README.md - now that this deterministic
+path is in place.
 """
+

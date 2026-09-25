@@ -1,15 +1,16 @@
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from gateway.auth.dependencies import get_current_user, require_project_access, require_team_access
-from gateway.db.models import Agent, Project, Team, User
+from gateway.db.models import Agent, Project, Team, UsageRecord, UsageStatus, User
 from gateway.db.session import get_db
 from gateway.policy.resolution import resolve_effective_policy
 from gateway.policy.schemas import EffectivePolicy
 from gateway.schemas.project import ProjectCreate, ProjectRead
+from gateway.schemas.usage import UsageSummary
 
 router = APIRouter(tags=["projects"])
 
@@ -73,3 +74,33 @@ async def get_effective_policy(
             )
 
     return await resolve_effective_policy(db, team.organization_id, team.id, project_id, agent_id)
+
+
+@router.get("/projects/{project_id}/usage", response_model=UsageSummary)
+async def get_project_usage(
+    project_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_project_access),
+):
+    """Cumulative, all-time totals for this project - the same numbers
+    Phase 5's budget check (usage/budgets.py) computes internally, made
+    visible without needing to query Postgres directly."""
+    result = await db.execute(
+        select(
+            func.count(UsageRecord.id),
+            func.count(UsageRecord.id).filter(UsageRecord.status == UsageStatus.success),
+            func.count(UsageRecord.id).filter(UsageRecord.status == UsageStatus.error),
+            func.coalesce(func.sum(UsageRecord.cost_usd), 0),
+            func.coalesce(func.sum(UsageRecord.input_tokens), 0),
+            func.coalesce(func.sum(UsageRecord.output_tokens), 0),
+        ).where(UsageRecord.project_id == project_id)
+    )
+    total, success, error, cost, input_tokens, output_tokens = result.one()
+    return UsageSummary(
+        total_requests=total,
+        success_count=success,
+        error_count=error,
+        total_cost_usd=float(cost),
+        total_input_tokens=int(input_tokens),
+        total_output_tokens=int(output_tokens),
+    )

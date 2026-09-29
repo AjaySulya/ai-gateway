@@ -9,7 +9,9 @@ from gateway.db.models import Agent, Project, Team, UsageRecord, UsageStatus, Us
 from gateway.db.session import get_db
 from gateway.policy.resolution import resolve_effective_policy
 from gateway.policy.schemas import EffectivePolicy
+from gateway.rate_limit.enforcement import get_rate_limit_status
 from gateway.schemas.project import ProjectCreate, ProjectRead
+from gateway.schemas.rate_limit import RateLimitStatus
 from gateway.schemas.usage import UsageSummary
 
 router = APIRouter(tags=["projects"])
@@ -104,3 +106,25 @@ async def get_project_usage(
         total_input_tokens=int(input_tokens),
         total_output_tokens=int(output_tokens),
     )
+
+
+@router.get("/projects/{project_id}/rate-limit-status", response_model=list[RateLimitStatus])
+async def get_project_rate_limit_status(
+    project_id: uuid.UUID,
+    agent_id: uuid.UUID | None = None,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_project_access),
+):
+    """Every level with a configured rate_limit_rpm and its current
+    one-minute-window count - read-only, doesn't consume a request slot."""
+    project = await db.get(Project, project_id)
+    team = await db.get(Team, project.team_id)
+
+    if agent_id is not None:
+        agent = await db.get(Agent, agent_id)
+        if agent is None or agent.project_id != project_id:
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST, "agent_id does not belong to this project"
+            )
+
+    return await get_rate_limit_status(db, team.organization_id, team.id, project_id, agent_id)

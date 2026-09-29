@@ -31,12 +31,19 @@ def merge_policy(base: EffectivePolicy, override: PolicyConfig) -> EffectivePoli
     else:
         allowed_regions = base.allowed_regions
 
+    block_prompt_injection = _tighter_bool(
+        base.block_prompt_injection, override.block_prompt_injection
+    )
+    redact_pii = _tighter_bool(base.redact_pii, override.redact_pii)
+
     return EffectivePolicy(
         allowed_models=allowed_models,
         denied_models=denied_models,
         budget_limit_usd=budget_limit_usd,
         rate_limit_rpm=rate_limit_rpm,
         allowed_regions=allowed_regions,
+        block_prompt_injection=block_prompt_injection,
+        redact_pii=redact_pii,
     )
 
 
@@ -46,3 +53,13 @@ def _tighter_min(a: float | None, b: float | None) -> float | None:
     if b is None:
         return a
     return min(a, b)
+
+
+def _tighter_bool(base: bool, override: bool | None) -> bool:
+    """True is the 'tighter' (safer) state for a security toggle, same
+    tightening principle as everything else in this function: once any
+    level in the hierarchy turns one on, a level below it can't turn it
+    back off. Unset (None) leaves whatever the parent already resolved to."""
+    if override is None:
+        return base
+    return base or override

@@ -97,3 +97,22 @@ def test_full_hierarchy_walk_only_narrows():
     assert effective.allows_model("claude-sonnet-4-6") is True
     assert effective.allows_model("gpt-4o") is False  # narrowed out at the agent level
     assert effective.allows_model("gpt-3.5-turbo") is False  # denied at the org level
+
+
+def test_security_flags_default_off():
+    root = EffectivePolicy()
+    assert root.block_prompt_injection is False
+    assert root.redact_pii is False
+
+
+def test_security_flag_unset_inherits_parent():
+    org = merge_policy(EffectivePolicy(), PolicyConfig(redact_pii=True))
+    team = merge_policy(org, PolicyConfig())  # team sets no policy at all
+    assert team.redact_pii is True
+
+
+def test_security_flag_is_sticky_once_enabled():
+    org = merge_policy(EffectivePolicy(), PolicyConfig(block_prompt_injection=True))
+    # Team tries to turn it back off - must not work.
+    team = merge_policy(org, PolicyConfig(block_prompt_injection=False))
+    assert team.block_prompt_injection is True

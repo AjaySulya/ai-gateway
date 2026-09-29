@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from gateway.data_plane.context import RequestContext
 from gateway.db.models import UsageRecord, UsageStatus
 from gateway.db.session import AsyncSessionLocal
+from gateway.observability.otel import cost_counter, request_counter, request_latency, token_counter
 
 
 def extract_usage_and_cost(
@@ -63,6 +64,31 @@ async def record_usage(
         )
     )
     await db.commit()
+
+    # Metrics recorded from the same place the row is written, rather than
+    # from every call site in gateway.api.chat individually - one choke
+    # point for "a request reached a terminal outcome," reused for both.
+    #
+    # Note: attributes here include raw UUIDs (organization_id, project_id).
+    # That's what "sliced by org/team/project" literally means, but on a
+    # cardinality-sensitive metrics backend (Prometheus in particular) high-
+    # cardinality label values can be expensive - fine for a console or
+    # OTLP-to-Tempo/Honeycomb setup, worth reconsidering (e.g. drop to
+    # traces/logs only for the highest-cardinality fields) against Prometheus.
+    attributes = {
+        "organization_id": str(context.organization_id),
+        "team_id": str(context.team_id),
+        "project_id": str(context.project_id),
+        "model": context.model_requested or "unknown",
+        "provider_id": str(provider_id) if provider_id else "none",
+        "status": status.value,
+    }
+    request_counter.add(1, attributes)
+    request_latency.record(latency_ms, attributes)
+    if total_tokens:
+        token_counter.add(total_tokens, attributes)
+    if cost_usd:
+        cost_counter.add(float(cost_usd), attributes)
 
 
 async def record_usage_standalone(context: RequestContext, **kwargs: Any) -> None:

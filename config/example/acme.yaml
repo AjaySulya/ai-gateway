@@ -1,0 +1,121 @@
+# Example gateway config - edit and apply with:
+#
+#   GATEWAY_URL=http://localhost:8000 \
+#   GATEWAY_TOKEN=<your-control-api-jwt> \
+#   uv run python -m gateway.gitops.cli sync --config config/example/acme.yaml
+#
+# Validate schema only (no network required):
+#   uv run python -m gateway.gitops.cli validate --config config/example/acme.yaml
+#
+# Check drift (what's live vs what config says should be there):
+#   uv run python -m gateway.gitops.cli drift --config config/example/acme.yaml
+
+organizations:
+  - name: Acme Corp
+    slug: acme
+
+    policies:
+      - name: org-default
+        scope: organization
+        config:
+          # Only these models are permitted anywhere under this org.
+          allowed_models:
+            - claude-sonnet-4-6
+            - claude-haiku-4-5-20251001
+            - mistralai/Mistral-7B-Instruct-v0.2
+
+    teams:
+      - name: Platform
+        slug: platform
+
+        policies:
+          - name: platform-budget
+            scope: team
+            config:
+              budget_limit_usd: 500.0
+              rate_limit_rpm: 500
+
+        projects:
+          - name: Internal Chatbot
+            slug: internal-chatbot
+
+            policies:
+              - name: chatbot-security
+                scope: project
+                config:
+                  block_prompt_injection: true
+                  redact_pii: true
+                  budget_limit_usd: 100.0
+                  rate_limit_rpm: 60
+
+            agents:
+              - name: Support Agent
+                slug: support-agent
+              - name: Onboarding Agent
+                slug: onboarding-agent
+
+            providers:
+              - name: anthropic-prod
+                provider_type: anthropic
+                # credential_ref names the environment variable the gateway
+                # reads at call time - the actual key is never stored here.
+                credential_ref: ANTHROPIC_API_KEY
+                models:
+                  - model_name: claude-sonnet-4-6
+                    display_name: Claude Sonnet 4.6
+                    priority: 10
+                  - model_name: claude-haiku-4-5-20251001
+                    display_name: Claude Haiku 4.5
+                    priority: 20
+
+              - name: huggingface-prod
+                provider_type: huggingface
+                credential_ref: HF_TOKEN
+                extra_config:
+                  # Remove api_base if using the shared Serverless Inference API
+                  # instead of a dedicated endpoint.
+                  api_base: https://xyz.endpoints.huggingface.cloud
+                models:
+                  - model_name: mistralai/Mistral-7B-Instruct-v0.2
+                    display_name: Mistral 7B Instruct
+                    priority: 30
+
+          - name: RAG Pipeline
+            slug: rag-pipeline
+
+            policies:
+              - name: rag-budget
+                scope: project
+                config:
+                  budget_limit_usd: 200.0
+
+            providers:
+              - name: anthropic-rag
+                provider_type: anthropic
+                credential_ref: ANTHROPIC_API_KEY
+                models:
+                  - model_name: claude-sonnet-4-6
+                    display_name: Claude Sonnet 4.6
+                    priority: 10
+
+      - name: Data Science
+        slug: data-science
+
+        policies:
+          - name: ds-budget
+            scope: team
+            config:
+              budget_limit_usd: 1000.0
+              rate_limit_rpm: 200
+
+        projects:
+          - name: Experiments
+            slug: experiments
+            providers:
+              - name: anthropic-experiments
+                provider_type: anthropic
+                credential_ref: ANTHROPIC_API_KEY
+                models:
+                  - model_name: claude-sonnet-4-6
+                    display_name: Claude Sonnet 4.6
+                    priority: 10

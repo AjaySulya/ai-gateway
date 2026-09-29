@@ -10,6 +10,9 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     # JWT signing key for the Control API. Override in .env for anything beyond local dev.
     secret_key: str = "change-me-in-production"
+    # Unset (default) = spans/metrics print to stdout via console exporters.
+    # Set to a collector URL (e.g. http://localhost:4318) to export via OTLP/HTTP instead.
+    otel_exporter_otlp_endpoint: str | None = None
 
 
 settings = Settings()

@@ -38,6 +38,7 @@ dev = [
 [package.dev-dependencies]
 dev = [
     { name = "python-multipart" },
+    { name = "ruff" },
 ]
 
 [package.metadata]
@@ -68,7 +69,10 @@ requires-dist = [
 provides-extras = ["dev"]
 
 [package.metadata.requires-dev]
-dev = [{ name = "python-multipart", specifier = ">=0.0.32" }]
+dev = [
+    { name = "python-multipart", specifier = ">=0.0.32" },
+    { name = "ruff", specifier = ">=0.16.8" },
+]
 
 [[package]]
 name = "aiohappyeyeballs"

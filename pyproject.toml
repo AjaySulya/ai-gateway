@@ -52,4 +52,5 @@ ignore = [
 [dependency-groups]
 dev = [
     "python-multipart>=0.0.32",
+    "ruff>=0.16.8",
 ]

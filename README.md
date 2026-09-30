@@ -68,7 +68,7 @@ The **Control API** (REST, JWT-authenticated) manages all of this. **PostgreSQL*
 **Prerequisites:** Python 3.11+, [uv](https://docs.astral.sh/uv/), Docker.
 
 ```bash
-git clone https://github.com/ajaysulya/ai-gateway.git
+git clone https://github.com/AjaySulya/ai-gateway.git
 cd ai-gateway
 
 uv sync

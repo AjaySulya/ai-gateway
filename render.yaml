@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: ai-gateway
+    runtime: docker
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      # Neon direct connection string, rewritten for asyncpg:
+      #   postgresql+asyncpg://USER:PASSWORD@HOST/DBNAME?ssl=require
+      - key: DATABASE_URL
+        sync: false
+      # Upstash Redis URL, with TLS: rediss://default:PASSWORD@HOST:6379
+      - key: REDIS_URL
+        sync: false
+      # Render generates a random value for you.
+      - key: SECRET_KEY
+        generateValue: true
+      # One line per credential_ref you register as a provider.
+      # Delete the ones you don't use.
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false

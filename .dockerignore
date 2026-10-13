@@ -1,0 +1,19 @@
+.git
+.github
+.venv
+__pycache__
+*.pyc
+.pytest_cache
+.ruff_cache
+
+# Never bake secrets into an image
+.env
+
+# Not needed at runtime
+frontend
+tests
+config
+docs
+*.md
+*.postman_collection.json
+docker-compose.yml

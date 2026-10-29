@@ -14,6 +14,12 @@ class PolicyCreate(BaseModel):
     enabled: bool = True
 
 
+class PolicyUpdate(BaseModel):
+    name: str | None = None
+    config: PolicyConfig | None = None
+    enabled: bool | None = None
+
+
 class PolicyRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

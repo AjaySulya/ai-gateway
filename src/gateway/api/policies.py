@@ -4,10 +4,14 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from gateway.auth.dependencies import check_scope_access, get_current_user
+from gateway.auth.dependencies import (
+    check_scope_access,
+    check_scope_read_access,
+    get_current_user,
+)
 from gateway.db.models import Policy, PolicyScope, User
 from gateway.db.session import get_db
-from gateway.schemas.policy import PolicyCreate, PolicyRead
+from gateway.schemas.policy import PolicyCreate, PolicyRead, PolicyUpdate
 
 router = APIRouter(prefix="/policies", tags=["policies"])
 
@@ -29,6 +33,26 @@ async def create_policy(
     return policy
 
 
+@router.patch("/{policy_id}", response_model=PolicyRead)
+async def update_policy(
+    policy_id: uuid.UUID,
+    payload: PolicyUpdate,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    policy = await db.get(Policy, policy_id)
+    if policy is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Policy not found")
+
+    await check_scope_access(db, user, policy.scope_type, policy.scope_id)
+
+    for field, value in payload.model_dump(exclude_unset=True).items():
+        setattr(policy, field, value)
+    await db.commit()
+    await db.refresh(policy)
+    return policy
+
+
 @router.get("", response_model=list[PolicyRead])
 async def list_policies(
     scope_type: PolicyScope,
@@ -36,6 +60,8 @@ async def list_policies(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
+    await check_scope_read_access(db, user, scope_type, scope_id)
+
     result = await db.execute(
         select(Policy).where(Policy.scope_type == scope_type, Policy.scope_id == scope_id)
     )

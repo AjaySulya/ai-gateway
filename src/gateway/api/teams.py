@@ -4,10 +4,15 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from gateway.auth.dependencies import get_current_user, require_org_admin
+from gateway.auth.dependencies import (
+    require_org_admin,
+    require_org_member,
+    require_team_access,
+    require_team_member,
+)
 from gateway.db.models import Team, TeamMembership, TeamRole, User
 from gateway.db.session import get_db
-from gateway.schemas.team import TeamCreate, TeamRead
+from gateway.schemas.team import TeamCreate, TeamRead, TeamUpdate
 
 router = APIRouter(tags=["teams"])
 
@@ -36,11 +41,29 @@ async def create_team(
     return team
 
 
+@router.patch("/teams/{team_id}", response_model=TeamRead)
+async def update_team(
+    team_id: uuid.UUID,
+    payload: TeamUpdate,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_team_access),
+):
+    team = await db.get(Team, team_id)
+    if team is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Team not found")
+
+    for field, value in payload.model_dump(exclude_unset=True).items():
+        setattr(team, field, value)
+    await db.commit()
+    await db.refresh(team)
+    return team
+
+
 @router.get("/organizations/{organization_id}/teams", response_model=list[TeamRead])
 async def list_teams(
     organization_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_org_member),
 ):
     result = await db.execute(select(Team).where(Team.organization_id == organization_id))
     return result.scalars().all()
@@ -50,7 +73,7 @@ async def list_teams(
 async def get_team(
     team_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_team_member),
 ):
     team = await db.get(Team, team_id)
     if team is None:

@@ -48,6 +48,13 @@ organizations:
                   budget_limit_usd: 100.0
                   rate_limit_rpm: 60
 
+              # Scope is explicit: this one attaches to the agent, not to the
+              # project block it is declared under.
+              - name: support-agent-limits
+                scope: agent:support-agent
+                config:
+                  rate_limit_rpm: 10
+
             agents:
               - name: Support Agent
                 slug: support-agent

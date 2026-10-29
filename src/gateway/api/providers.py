@@ -1,19 +1,21 @@
 import uuid
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from gateway.auth.dependencies import (
-    get_current_user,
+    require_model_access,
     require_project_access,
+    require_project_member,
     require_provider_access,
+    require_provider_member,
 )
 from gateway.db.models import Model, Provider, User
 from gateway.db.session import get_db
 from gateway.routing import circuit_breaker
-from gateway.schemas.model_catalog import ModelCreate, ModelRead
-from gateway.schemas.provider import ProviderCreate, ProviderHealth, ProviderRead
+from gateway.schemas.model_catalog import ModelCreate, ModelRead, ModelUpdate
+from gateway.schemas.provider import ProviderCreate, ProviderHealth, ProviderRead, ProviderUpdate
 
 router = APIRouter(tags=["providers"])
 
@@ -36,11 +38,29 @@ async def create_provider(
     return provider
 
 
+@router.patch("/providers/{provider_id}", response_model=ProviderRead)
+async def update_provider(
+    provider_id: uuid.UUID,
+    payload: ProviderUpdate,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_provider_access),
+):
+    provider = await db.get(Provider, provider_id)
+    if provider is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Provider not found")
+
+    for field, value in payload.model_dump(exclude_unset=True).items():
+        setattr(provider, field, value)
+    await db.commit()
+    await db.refresh(provider)
+    return provider
+
+
 @router.get("/projects/{project_id}/providers", response_model=list[ProviderRead])
 async def list_providers(
     project_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_project_member),
 ):
     result = await db.execute(select(Provider).where(Provider.project_id == project_id))
     return result.scalars().all()
@@ -64,11 +84,29 @@ async def create_model(
     return model
 
 
+@router.patch("/models/{model_id}", response_model=ModelRead)
+async def update_model(
+    model_id: uuid.UUID,
+    payload: ModelUpdate,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_model_access),
+):
+    model = await db.get(Model, model_id)
+    if model is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Model not found")
+
+    for field, value in payload.model_dump(exclude_unset=True).items():
+        setattr(model, field, value)
+    await db.commit()
+    await db.refresh(model)
+    return model
+
+
 @router.get("/providers/{provider_id}/models", response_model=list[ModelRead])
 async def list_models(
     provider_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_provider_member),
 ):
     result = await db.execute(select(Model).where(Model.provider_id == provider_id))
     return result.scalars().all()

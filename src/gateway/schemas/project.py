@@ -8,6 +8,11 @@ class ProjectCreate(BaseModel):
     slug: str
 
 
+class ProjectUpdate(BaseModel):
+    name: str | None = None
+    slug: str | None = None
+
+
 class ProjectRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

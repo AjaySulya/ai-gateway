@@ -4,7 +4,11 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from gateway.auth.dependencies import get_current_user, require_project_access
+from gateway.auth.dependencies import (
+    get_current_user,
+    require_project_access,
+    require_project_member,
+)
 from gateway.auth.security import generate_api_key
 from gateway.db.models import APIKey, User
 from gateway.db.session import get_db
@@ -42,7 +46,7 @@ async def create_api_key(
 async def list_api_keys(
     project_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_project_member),
 ):
     result = await db.execute(select(APIKey).where(APIKey.project_id == project_id))
     return result.scalars().all()

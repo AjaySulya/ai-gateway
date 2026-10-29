@@ -8,6 +8,11 @@ class TeamCreate(BaseModel):
     slug: str
 
 
+class TeamUpdate(BaseModel):
+    name: str | None = None
+    slug: str | None = None
+
+
 class TeamRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

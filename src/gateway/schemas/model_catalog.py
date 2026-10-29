@@ -9,6 +9,13 @@ class ModelCreate(BaseModel):
     priority: int = 100
 
 
+class ModelUpdate(BaseModel):
+    model_name: str | None = None
+    display_name: str | None = None
+    priority: int | None = None
+    is_active: bool | None = None
+
+
 class ModelRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

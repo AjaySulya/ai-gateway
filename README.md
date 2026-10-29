@@ -210,7 +210,7 @@ uv run python -m gateway.gitops.cli sync     --config config/example/acme.yaml  
 uv run python -m gateway.gitops.cli drift    --config config/example/acme.yaml   # exits 2 if live state differs
 ```
 
-The sync is idempotent (create if missing) and **never deletes**, so a typo in a config file can't remove production resources. Every change is written to an audit log (`--audit-log path.json` to save it). CI validates any config change (`.github/workflows/validate-config.yml`).
+The sync is idempotent (create if missing, update if changed) and **never deletes**, so a typo in a config file can't remove production resources. Every create/update is written to an audit log (`--audit-log path.json` to save it). CI validates any config change (`.github/workflows/validate-config.yml`).
 
 ## Observability
 
@@ -278,7 +278,7 @@ Adding a value to an existing Postgres enum (for example a new `ProviderType`) i
 
 - **Alpha quality.** Only the policy-merge logic has automated tests. There is no integration test suite yet.
 - **Minimal user management.** The only way to create a user is `/auth/bootstrap`. Org-admin and team-lead roles and membership tables exist, but there are no endpoints to invite users or assign roles, so in practice the bootstrap superuser manages everything.
-- **Read endpoints aren't membership-scoped.** Any logged-in user can read org, team, project, provider, and policy metadata (writes are scoped correctly). Fine for a single internal deployment, not for multi-tenant use. There's no read-only role.
+- **No read-only role.** Reads are membership-scoped: superusers can read everything, organization members can read resources under their org, and team members can read resources under their team. There is no distinct read-only role or user/membership management endpoint yet.
 - **Streaming:** cost is never recorded, tokens only when the provider includes usage in a chunk, and failover only happens before the first chunk is sent.
 - **Budgets:** cumulative all-time with no reset window. Cost comes from LiteLLM's pricing table, so models it doesn't know count as $0. Checks aren't atomic, so concurrent requests can overshoot a cap slightly.
 - **Rate limiting** uses fixed windows, so bursts of up to about 2x the limit are possible across a minute boundary.
@@ -290,7 +290,7 @@ Adding a value to an existing Postgres enum (for example a new `ProviderType`) i
 ## Roadmap
 
 - Admin UI on top of the existing Control API
-- User and membership endpoints, a read-only role, membership-scoped reads
+- User and membership endpoints and a read-only role
 - Time-windowed budgets (daily and monthly) and atomic budget accounting
 - Sliding-window or token-bucket rate limiting
 - Streaming usage and cost accounting

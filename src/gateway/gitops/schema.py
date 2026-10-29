@@ -38,7 +38,8 @@ class PolicyConfigEntry(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     name: str
-    scope: str  # "project" | "agent:<slug>"
+    # "organization" | "team" | "project" | "agent" | "agent:<slug>"
+    scope: str
     config: PolicyConfig
 
 

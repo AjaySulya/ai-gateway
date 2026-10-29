@@ -4,13 +4,18 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from gateway.auth.dependencies import get_current_user, require_project_access, require_team_access
+from gateway.auth.dependencies import (
+    require_project_access,
+    require_project_member,
+    require_team_access,
+    require_team_member,
+)
 from gateway.db.models import Agent, Project, Team, UsageRecord, UsageStatus, User
 from gateway.db.session import get_db
 from gateway.policy.resolution import resolve_effective_policy
 from gateway.policy.schemas import EffectivePolicy
 from gateway.rate_limit.enforcement import get_rate_limit_status
-from gateway.schemas.project import ProjectCreate, ProjectRead
+from gateway.schemas.project import ProjectCreate, ProjectRead, ProjectUpdate
 from gateway.schemas.rate_limit import RateLimitStatus
 from gateway.schemas.usage import UsageSummary
 
@@ -33,11 +38,29 @@ async def create_project(
     return project
 
 
+@router.patch("/projects/{project_id}", response_model=ProjectRead)
+async def update_project(
+    project_id: uuid.UUID,
+    payload: ProjectUpdate,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_project_access),
+):
+    project = await db.get(Project, project_id)
+    if project is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Project not found")
+
+    for field, value in payload.model_dump(exclude_unset=True).items():
+        setattr(project, field, value)
+    await db.commit()
+    await db.refresh(project)
+    return project
+
+
 @router.get("/teams/{team_id}/projects", response_model=list[ProjectRead])
 async def list_projects(
     team_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_team_member),
 ):
     result = await db.execute(select(Project).where(Project.team_id == team_id))
     return result.scalars().all()
@@ -47,7 +70,7 @@ async def list_projects(
 async def get_project(
     project_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_project_member),
 ):
     project = await db.get(Project, project_id)
     if project is None:

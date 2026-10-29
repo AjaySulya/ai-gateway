@@ -12,6 +12,14 @@ class ProviderCreate(BaseModel):
     extra_config: dict = {}
 
 
+class ProviderUpdate(BaseModel):
+    name: str | None = None
+    provider_type: ProviderType | None = None
+    credential_ref: str | None = None
+    extra_config: dict | None = None
+    is_active: bool | None = None
+
+
 class ProviderRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

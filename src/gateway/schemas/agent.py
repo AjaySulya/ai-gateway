@@ -8,6 +8,11 @@ class AgentCreate(BaseModel):
     slug: str
 
 
+class AgentUpdate(BaseModel):
+    name: str | None = None
+    slug: str | None = None
+
+
 class AgentRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

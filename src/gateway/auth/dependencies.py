@@ -8,6 +8,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from gateway.auth.security import decode_access_token
 from gateway.db.models import (
     Agent,
+    Model,
+    Organization,
     OrganizationMembership,
     OrganizationRole,
     PolicyScope,
@@ -144,6 +146,110 @@ async def require_provider_access(
     if provider is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Provider not found")
     return await require_project_access(provider.project_id, user, db)
+
+
+async def require_model_access(
+    model_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> User:
+    model = await db.get(Model, model_id)
+    if model is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Model not found")
+    return await require_provider_access(model.provider_id, user, db)
+
+
+async def _has_team_read_access(db: AsyncSession, user: User, team: Team) -> bool:
+    """Any org member or team member may read; superusers pass via _org_role."""
+    if await _org_role(db, user, team.organization_id) is not None:
+        return True
+    return await _team_role(db, user, team.id) is not None
+
+
+async def require_org_member(
+    organization_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> User:
+    """Any member of the organization (or a superuser) may read its metadata."""
+    org = await db.get(Organization, organization_id)
+    if org is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Organization not found")
+    if await _org_role(db, user, organization_id) is None:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Organization membership required")
+    return user
+
+
+async def require_team_member(
+    team_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> User:
+    """An org member or a member of the team may read team metadata."""
+    team = await db.get(Team, team_id)
+    if team is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Team not found")
+    if not await _has_team_read_access(db, user, team):
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN, "Team or organization membership required"
+        )
+    return user
+
+
+async def require_project_member(
+    project_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> User:
+    """An org member or a member of the project's team may read project metadata."""
+    project = await db.get(Project, project_id)
+    if project is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Project not found")
+
+    team = await db.get(Team, project.team_id)
+    if team is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Team not found")
+    if not await _has_team_read_access(db, user, team):
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN, "Team or organization membership required"
+        )
+    return user
+
+
+async def require_agent_member(
+    agent_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> User:
+    agent = await db.get(Agent, agent_id)
+    if agent is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Agent not found")
+    return await require_project_member(agent.project_id, user, db)
+
+
+async def require_provider_member(
+    provider_id: uuid.UUID,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> User:
+    provider = await db.get(Provider, provider_id)
+    if provider is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Provider not found")
+    return await require_project_member(provider.project_id, user, db)
+
+
+async def check_scope_read_access(
+    db: AsyncSession, user: User, scope_type: PolicyScope, scope_id: uuid.UUID
+) -> None:
+    """Read-side counterpart to check_scope_access, for policy listing."""
+    if scope_type == PolicyScope.organization:
+        await require_org_member(scope_id, user, db)
+    elif scope_type == PolicyScope.team:
+        await require_team_member(scope_id, user, db)
+    elif scope_type == PolicyScope.project:
+        await require_project_member(scope_id, user, db)
+    elif scope_type == PolicyScope.agent:
+        await require_agent_member(scope_id, user, db)
 
 
 async def check_scope_access(

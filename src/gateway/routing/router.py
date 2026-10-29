@@ -29,6 +29,54 @@ from gateway.routing.strategies import get_candidates
 MAX_RETRIES_PER_CANDIDATE = 2
 BASE_BACKOFF_SECONDS = 0.5
 
+# Settings that must only ever come from the stored Provider row, never from a
+# request body. ChatCompletionRequest already filters request extras through
+# PASSTHROUGH_FIELDS; this is defense in depth for any other caller of
+# route_chat_completion(). A caller-supplied api_base, for example, would
+# redirect the provider call - including the provider credential - to an
+# arbitrary URL.
+PROVIDER_ONLY_KWARGS = frozenset(
+    {
+        "api_base",
+        "base_url",
+        "api_key",
+        "custom_llm_provider",
+        "headers",
+        "timeout",
+        "client",
+        "ssl_verify",
+        "organization",
+        "api_version",
+        "deployment_id",
+        "azure_ad_token",
+        "azure_ad_token_provider",
+        "vertex_project",
+        "vertex_location",
+        "aws_access_key_id",
+        "aws_secret_access_key",
+        "aws_session_token",
+        "aws_region_name",
+        "region_name",
+    }
+)
+
+
+def merge_call_kwargs(
+    provider_extra: dict[str, Any] | None, request_extra: dict[str, Any]
+) -> dict[str, Any]:
+    """Combine request parameters with provider configuration.
+
+    Provider configuration is authoritative: a request can never override the
+    provider's api_base, api_version, region, credentials, or other routing
+    settings. The denylist also protects callers that bypass the schema-level
+    whitelist.
+    """
+    safe_request = {
+        key: value for key, value in request_extra.items() if key not in PROVIDER_ONLY_KWARGS
+    }
+    return {**safe_request, **(provider_extra or {})}
+
+
 # Per LiteLLM's documented exception mapping (top-level litellm.<Name>).
 # Worth a manual check against `uv sync`'s resolved litellm version if these
 # don't match - this is the one place the router depends on LiteLLM's exact
@@ -129,9 +177,9 @@ async def route_chat_completion(
             continue
 
         api_key = resolve_credential(provider)
-        # Provider-level defaults (e.g. a HuggingFace endpoint's api_base)
-        # apply unless the request itself specifies the same key.
-        call_kwargs = {**provider.extra_config, **extra}
+        # Provider-level config (e.g. a HuggingFace endpoint's api_base) wins
+        # over request parameters; see merge_call_kwargs().
+        call_kwargs = merge_call_kwargs(provider.extra_config, extra)
         attempted.append(provider.name)
 
         try:

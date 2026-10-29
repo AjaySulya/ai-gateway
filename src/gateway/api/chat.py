@@ -120,7 +120,10 @@ async def chat_completions(
         )
 
     messages = [m.model_dump() for m in payload.messages]
-    extra = payload.model_dump(exclude={"model", "messages", "stream"}, exclude_none=True)
+    # Only whitelisted OpenAI parameters reach LiteLLM. See
+    # ChatCompletionRequest.provider_params() - provider routing config such as
+    # api_base must never be caller-controlled.
+    extra = payload.provider_params()
 
     # Request Analyzer before Security Engine - deliberately reversed from
     # the architecture diagram's literal box order (Security Engine, then

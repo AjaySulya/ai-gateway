@@ -4,10 +4,15 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from gateway.auth.dependencies import get_current_user, require_superuser
+from gateway.auth.dependencies import (
+    get_current_user,
+    require_org_admin,
+    require_org_member,
+    require_superuser,
+)
 from gateway.db.models import Organization, OrganizationMembership, OrganizationRole, User
 from gateway.db.session import get_db
-from gateway.schemas.organization import OrganizationCreate, OrganizationRead
+from gateway.schemas.organization import OrganizationCreate, OrganizationRead, OrganizationUpdate
 
 router = APIRouter(prefix="/organizations", tags=["organizations"])
 
@@ -27,6 +32,24 @@ async def create_organization(
     db.add(
         OrganizationMembership(user_id=user.id, organization_id=org.id, role=OrganizationRole.admin)
     )
+    await db.commit()
+    await db.refresh(org)
+    return org
+
+
+@router.patch("/{organization_id}", response_model=OrganizationRead)
+async def update_organization(
+    organization_id: uuid.UUID,
+    payload: OrganizationUpdate,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_org_admin),
+):
+    org = await db.get(Organization, organization_id)
+    if org is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Organization not found")
+
+    for field, value in payload.model_dump(exclude_unset=True).items():
+        setattr(org, field, value)
     await db.commit()
     await db.refresh(org)
     return org
@@ -52,7 +75,7 @@ async def list_my_organizations(
 async def get_organization(
     organization_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_org_member),
 ):
     org = await db.get(Organization, organization_id)
     if org is None:
